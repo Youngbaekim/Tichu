@@ -1,0 +1,16 @@
+{
+  "name": "Tichu Scoreboard",
+  "short_name": "Tichu",
+  "start_url": "/Tichu/",
+  "display": "standalone",
+  "background_color": "#0f1f2e",
+  "theme_color": "#0f1f2e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
