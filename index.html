@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Tichu Scoreboard</title>
+<title>Tichu & Crokinole</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,16 +15,18 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0f1f2e; min-height: 100vh; padding: 28px 20px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; position: relative; }
 
-  .score-band { background: #1a2e3f; border-radius: 14px; padding: 20px 20px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; border: 1px solid #2a4a5e; }
-  .team-block { flex: 1; }
-  .team-block.right { text-align: right; }
-  .team-label { font-size: 11px; color: #7a9bb0; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; cursor: pointer; border-bottom: 1px dashed #2a4a5e; display: inline-block; padding-bottom: 1px; }
-  .team-score { font-size: 60px; font-weight: 500; line-height: 1; display: inline-block; border-radius: 10px; padding: 2px 8px; border: 3px solid transparent; transition: border-color 0.3s; }
+  .score-band { background: #1a2e3f; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #2a4a5e; }
+  .team-block { flex: 1; display: flex; flex-direction: column; }
+  .team-block.right { align-items: stretch; text-align: right; }
+  .team-label { font-size: 10px; color: #7a9bb0; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; cursor: pointer; display: block; padding-bottom: 1px; border-bottom: 1px dashed #2a4a5e; }
+  .team-score { font-size: 58px; font-weight: 500; line-height: 1; display: inline-block; border-radius: 10px; padding: 2px 6px; border: 3px solid transparent; transition: border-color 0.3s; }
   .score-a { color: #ff4444; }
   .score-b { color: #4488ff; }
   .score-a.leading { border-color: #4488ff; }
   .score-b.leading { border-color: #ff4444; }
-  .divider-col { padding: 0 12px 8px; font-size: 20px; color: #2a4a5e; font-weight: 300; }
+  .divider-col { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8px; gap: 8px; }
+  .game-btn { background: #0f1f2e; border: 1px solid #2a4a5e; border-radius: 9px; padding: 10px 12px; font-size: 12px; font-weight: 500; font-family: inherit; color: #4a6a80; cursor: pointer; text-align: center; transition: all 0.15s; -webkit-tap-highlight-color: transparent; width: 80px; }
+  .game-btn.active { background: #1d3a52; border-color: #4a8fa8; color: #e0eaf2; }
 
   .input-card { background: #1a2e3f; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; border: 1px solid #2a4a5e; }
   .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
@@ -74,7 +77,10 @@
       <div class="team-label" id="name-a" onclick="editName('a')">Team A</div>
       <div class="team-score score-a" id="total-a">0</div>
     </div>
-    <div class="divider-col">:</div>
+    <div class="divider-col">
+      <button class="game-btn active" id="btn-tichu" onclick="selectGame('tichu')">Tichu</button>
+      <button class="game-btn" id="btn-crokinole" onclick="selectGame('crokinole')">Crokinole</button>
+    </div>
     <div class="team-block right">
       <div class="team-label" id="name-b" onclick="editName('b')">Team B</div>
       <div class="team-score score-b" id="total-b">0</div>
@@ -86,7 +92,7 @@
       <input class="score-input" id="inp-a" type="number" inputmode="numeric" placeholder="0" />
       <input class="score-input" id="inp-b" type="number" inputmode="numeric" placeholder="0" />
     </div>
-    <div class="adj-row">
+    <div class="adj-row" id="adj-row">
       <div class="adj-pair">
         <button class="btn-adj plus" onclick="adjust('a', 100)">+100</button>
         <button class="btn-adj minus" onclick="adjust('a', -100)">−100</button>
@@ -122,7 +128,8 @@
   </div>
 
 <script>
-  const WIN = 1000;
+  let WIN = 1000;
+  let gameMode = 'tichu';
   let rounds = [];
   let names = { a: 'Team A', b: 'Team B' };
 
@@ -148,24 +155,31 @@
   }
   function validate() {
     const va = inpA.value, vb = inpB.value;
-    const okA = isValidScore(va), okB = isValidScore(vb);
+    const okA = gameMode === 'tichu' ? isValidScore(va) : (va === '' || !isNaN(Number(va)));
+    const okB = gameMode === 'tichu' ? isValidScore(vb) : (vb === '' || !isNaN(Number(vb)));
     inpA.classList.toggle('invalid', !okA);
     inpB.classList.toggle('invalid', !okB);
     btnAdd.disabled = !(okA && okB && !(va === '' && vb === ''));
     hint.textContent = (!okA || !okB) ? '1의 자리는 0 또는 5만 입력 가능합니다' : '';
   }
   inpA.addEventListener('input', () => {
-    if (!inpB.matches(':focus')) {
+    if (gameMode === 'tichu' && !inpB.matches(':focus')) {
       const auto = getAutoVal(inpA.value);
       if (auto !== '') { inpB.value = auto; inpB.classList.add('auto'); }
+      else { inpB.value = ''; inpB.classList.remove('auto'); }
+    } else if (gameMode === 'crokinole' && !inpB.matches(':focus')) {
+      if (inpA.value !== '') { inpB.value = '0'; inpB.classList.add('auto'); }
       else { inpB.value = ''; inpB.classList.remove('auto'); }
     }
     validate();
   });
   inpB.addEventListener('input', () => {
-    if (!inpA.matches(':focus')) {
+    if (gameMode === 'tichu' && !inpA.matches(':focus')) {
       const auto = getAutoVal(inpB.value);
       if (auto !== '') { inpA.value = auto; inpA.classList.add('auto'); }
+      else { inpA.value = ''; inpA.classList.remove('auto'); }
+    } else if (gameMode === 'crokinole' && !inpA.matches(':focus')) {
+      if (inpB.value !== '') { inpA.value = '0'; inpA.classList.add('auto'); }
       else { inpA.value = ''; inpA.classList.remove('auto'); }
     }
     validate();
@@ -229,6 +243,28 @@
   function restartGame() {
     rounds = [];
     document.getElementById('win-overlay').classList.remove('show');
+    render();
+  }
+  function selectGame(mode) {
+    gameMode = mode;
+    WIN = mode === 'tichu' ? 1000 : 100;
+    document.getElementById('btn-tichu').classList.toggle('active', mode === 'tichu');
+    document.getElementById('btn-crokinole').classList.toggle('active', mode === 'crokinole');
+    const steps = mode === 'tichu' ? 100 : 5;
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .plus').textContent = '+' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .minus').textContent = '−' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .plus').textContent = '+' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .minus').textContent = '−' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .plus').onclick = () => adjust('a', steps);
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .minus').onclick = () => adjust('a', -steps);
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .plus').onclick = () => adjust('b', steps);
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .minus').onclick = () => adjust('b', -steps);
+    inpA.value = ''; inpB.value = '';
+    inpA.classList.remove('auto', 'invalid');
+    inpB.classList.remove('auto', 'invalid');
+    hint.textContent = '';
+    btnAdd.disabled = true;
+    rounds = [];
     render();
   }
   function editName(team) {
