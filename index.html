@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Tichu & Crokinole</title>
+<title>Tichu Scoreboard</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -62,6 +61,13 @@
   .empty-msg { padding: 20px; text-align: center; font-size: 13px; color: #3a5a70; }
 
   .win-overlay { display: none; position: fixed; inset: 0; background: rgba(0,10,20,0.85); align-items: center; justify-content: center; z-index: 10; }
+  .switch-overlay { display: none; position: fixed; inset: 0; background: rgba(0,10,20,0.85); align-items: center; justify-content: center; z-index: 20; }
+  .switch-overlay.show { display: flex; }
+  .switch-box { background: #1a2e3f; border: 1px solid #2a4a5e; border-radius: 16px; padding: 28px 24px; text-align: center; width: 82%; }
+  .switch-msg { font-size: 14px; color: #e0eaf2; line-height: 1.6; margin-bottom: 20px; }
+  .switch-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-switch-confirm { background: #8b2020; color: #ffe0e0; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-family: inherit; font-weight: 500; cursor: pointer; }
+  .btn-switch-cancel { background: #1a2e3f; color: #7a9bb0; border: 1px solid #2a4a5e; border-radius: 10px; padding: 12px; font-size: 14px; font-family: inherit; cursor: pointer; }
   .win-overlay.show { display: flex; }
   .win-box { background: #1a2e3f; border: 1px solid #2a4a5e; border-radius: 20px; padding: 36px 40px; text-align: center; width: 80%; }
   .win-label { font-size: 11px; color: #7a9bb0; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
@@ -103,7 +109,7 @@
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn-add" id="btn-add" onclick="addRound()">점수입력/라운드추가</button>
+      <button class="btn-add" id="btn-add" onclick="addRound()">점수 입력 / 라운드 추가</button>
       <button class="btn-undo" onclick="undoRound()">↩</button>
     </div>
     <p class="hint" id="hint"></p>
@@ -130,6 +136,7 @@
 <script>
   let WIN = 1000;
   let gameMode = 'tichu';
+  let pendingMode = null;
   let rounds = [];
   let names = { a: 'Team A', b: 'Team B' };
 
@@ -246,6 +253,14 @@
     render();
   }
   function selectGame(mode) {
+    if (mode === gameMode) return;
+    const ta = rounds.reduce((s, r) => s + r.a, 0);
+    const tb = rounds.reduce((s, r) => s + r.b, 0);
+    if ((ta !== 0 || tb !== 0) && rounds.length > 0) {
+      pendingMode = mode;
+      document.getElementById('switch-overlay').classList.add('show');
+      return;
+    }
     gameMode = mode;
     WIN = mode === 'tichu' ? 1000 : 100;
     document.getElementById('btn-tichu').classList.toggle('active', mode === 'tichu');
@@ -267,6 +282,35 @@
     rounds = [];
     render();
   }
+  function confirmSwitch() {
+    document.getElementById('switch-overlay').classList.remove('show');
+    const mode = pendingMode;
+    pendingMode = null;
+    rounds = [];
+    gameMode = mode;
+    WIN = mode === 'tichu' ? 1000 : 100;
+    document.getElementById('btn-tichu').classList.toggle('active', mode === 'tichu');
+    document.getElementById('btn-crokinole').classList.toggle('active', mode === 'crokinole');
+    const steps = mode === 'tichu' ? 100 : 5;
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .plus').textContent = '+' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .minus').textContent = '−' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .plus').textContent = '+' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .minus').textContent = '−' + steps;
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .plus').onclick = () => adjust('a', steps);
+    document.querySelector('#adj-row .adj-pair:nth-child(1) .minus').onclick = () => adjust('a', -steps);
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .plus').onclick = () => adjust('b', steps);
+    document.querySelector('#adj-row .adj-pair:nth-child(2) .minus').onclick = () => adjust('b', -steps);
+    inpA.value = ''; inpB.value = '';
+    inpA.classList.remove('auto', 'invalid');
+    inpB.classList.remove('auto', 'invalid');
+    hint.textContent = '';
+    btnAdd.disabled = true;
+    render();
+  }
+  function cancelSwitch() {
+    document.getElementById('switch-overlay').classList.remove('show');
+    pendingMode = null;
+  }
   function editName(team) {
     const next = prompt('팀 이름 변경:', names[team]);
     if (next && next.trim()) {
@@ -277,5 +321,14 @@
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && !btnAdd.disabled) addRound(); });
   render();
 </script>
+  <div class="switch-overlay" id="switch-overlay">
+    <div class="switch-box">
+      <p class="switch-msg">기존 점수가 사라집니다.<br>다시 시작하시겠어요?</p>
+      <div class="switch-btns">
+        <button class="btn-switch-confirm" onclick="confirmSwitch()">다시 시작</button>
+        <button class="btn-switch-cancel" onclick="cancelSwitch()">취소</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
